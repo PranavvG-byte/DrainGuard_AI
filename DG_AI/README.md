@@ -335,31 +335,9 @@ If rainfall continues at current rate, **overflow is likely within 3–4 hours**
 
 ---
 
-## 📜 License
-
-This project is licensed under the **MIT License** – see LICENSE file for details.
-
----
-
 ## 👥 Team
 
 **DrainGuard AI** – Built with passion for smarter cities.
-
-For questions or collaboration, please reach out via GitHub Issues or contact the maintainers.
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
----
-
-## 📞 Support & Feedback
-
-- 🐛 **Found a bug?** – Open an [Issue](https://github.com/PranavvG-byte/DrainGuard_AI/issues)
-- 💡 **Have an idea?** – Start a [Discussion](https://github.com/PranavvG-byte/DrainGuard_AI/discussions)
-- ⭐ **Liked it?** – Please star the repository!
 
 ---
 
