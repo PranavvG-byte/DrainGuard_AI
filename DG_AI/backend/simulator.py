@@ -12,8 +12,7 @@ import logging
 import numpy as np
 from datetime import datetime
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config.settings import (
     SIMULATOR_INTERVAL,
     SIMULATOR_ANOMALY_RATE,
@@ -94,6 +93,8 @@ class SensorSimulator:
             water, gas = self._generate_anomaly_values()
             self._anomaly_burst_remaining -= 1
             is_anomaly = True
+            if self._anomaly_burst_remaining == 0:
+                self._current_anomaly_type = None  # Reset after burst ends
         elif self._inject_anomaly or self._rng.random() < self.anomaly_rate * 0.1:
             # Start new anomaly burst
             self._start_anomaly_burst()

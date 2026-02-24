@@ -4,7 +4,6 @@ Loads the trained Isolation Forest model and provides real-time anomaly predicti
 """
 
 import os
-import sys
 import time
 import logging
 import numpy as np
@@ -12,7 +11,7 @@ import pandas as pd
 import joblib
 from collections import deque
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config.settings import (
     MODEL_PATH,
     FEATURE_ROLLING_WINDOW,
@@ -43,6 +42,8 @@ class AnomalyDetector:
             self._model = None
             self._scaler = None
             self._score_threshold = -0.1
+            self._rolling_window = FEATURE_ROLLING_WINDOW
+            self._feature_names = []
             return
 
         package = joblib.load(model_path)

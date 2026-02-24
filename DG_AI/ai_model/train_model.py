@@ -7,14 +7,13 @@ Usage:
 """
 
 import os
-import sys
 import numpy as np
 import pandas as pd
 import joblib
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config.settings import (
     SENSOR_DATA_CSV, MODEL_PATH, MODEL_DIR,
     ISOLATION_FOREST_ESTIMATORS,
@@ -124,6 +123,8 @@ def train_model():
     print(f"        False Negatives: {false_negative}")
     print(f"        Precision:       {precision:.3f}")
     print(f"        Recall:          {recall:.3f}")
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+    print(f"        F1-Score:        {f1:.3f}")
 
     # Save model + scaler + metadata
     print(f"\n[4/4] Saving model to {MODEL_PATH}...")
@@ -140,6 +141,7 @@ def train_model():
             "anomalies_detected": int(anomaly_count),
             "precision": float(precision),
             "recall": float(recall),
+            "f1_score": float(f1),
             "score_mean": float(scores.mean()),
             "score_std": float(scores.std()),
         }

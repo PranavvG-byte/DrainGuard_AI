@@ -15,7 +15,7 @@ from plotly.subplots import make_subplots
 import streamlit as st
 from datetime import datetime, timedelta
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config.settings import (
     LIVE_DATA_CSV, ALERT_LOG_CSV, SENSOR_DATA_CSV,
     DASHBOARD_REFRESH_SECONDS, DASHBOARD_MAX_POINTS,
@@ -273,30 +273,36 @@ header {visibility: hidden;}
 
 
 # ─── Data Loading ────────────────────────────────────────────
-@st.cache_data(ttl=DASHBOARD_REFRESH_SECONDS)
-def load_live_data():
-    try:
-        if os.path.exists(LIVE_DATA_CSV):
-            df = pd.read_csv(LIVE_DATA_CSV)
-            if len(df) > 0:
-                df["timestamp"] = pd.to_datetime(df["timestamp"])
-                return df.tail(DASHBOARD_MAX_POINTS)
-    except Exception:
-        pass
-    return pd.DataFrame()
+def load_live_data(ttl_seconds=DASHBOARD_REFRESH_SECONDS):
+    """Load live data with configurable cache TTL (#13: respects slider)."""
+    @st.cache_data(ttl=ttl_seconds)
+    def _load(ttl_key):
+        try:
+            if os.path.exists(LIVE_DATA_CSV):
+                df = pd.read_csv(LIVE_DATA_CSV)
+                if len(df) > 0:
+                    df["timestamp"] = pd.to_datetime(df["timestamp"])
+                    return df.tail(DASHBOARD_MAX_POINTS)
+        except Exception:
+            pass
+        return pd.DataFrame()
+    return _load(ttl_seconds)
 
 
-@st.cache_data(ttl=DASHBOARD_REFRESH_SECONDS)
-def load_alerts():
-    try:
-        if os.path.exists(ALERT_LOG_CSV):
-            df = pd.read_csv(ALERT_LOG_CSV)
-            if len(df) > 0:
-                df["timestamp"] = pd.to_datetime(df["timestamp"])
-                return df.tail(50)
-    except Exception:
-        pass
-    return pd.DataFrame()
+def load_alerts(ttl_seconds=DASHBOARD_REFRESH_SECONDS):
+    """Load alerts with configurable cache TTL (#13: respects slider)."""
+    @st.cache_data(ttl=ttl_seconds)
+    def _load(ttl_key):
+        try:
+            if os.path.exists(ALERT_LOG_CSV):
+                df = pd.read_csv(ALERT_LOG_CSV)
+                if len(df) > 0:
+                    df["timestamp"] = pd.to_datetime(df["timestamp"])
+                    return df.tail(50)
+        except Exception:
+            pass
+        return pd.DataFrame()
+    return _load(ttl_seconds)
 
 
 @st.cache_data(ttl=60)
@@ -409,19 +415,19 @@ def create_gas_level_chart(df):
                   annotation_text="⚠ Warning", annotation_position="top left",
                   annotation_font=dict(color="#eab308", size=9))
 
-    # Color-changing line based on gas level
-    colors = []
-    for v in df["gas_level"]:
-        if v > GAS_DANGER_THRESHOLD:
-            colors.append("#ef4444")
-        elif v > GAS_WARNING_THRESHOLD:
-            colors.append("#eab308")
-        else:
-            colors.append("#a855f7")
+    # Color-code markers by gas level (#6: removed unused colors list)
+    marker_colors = [
+        "#ef4444" if v > GAS_DANGER_THRESHOLD
+        else "#eab308" if v > GAS_WARNING_THRESHOLD
+        else "#a855f7"
+        for v in df["gas_level"]
+    ]
 
     fig.add_trace(go.Scatter(
         x=df["timestamp"], y=df["gas_level"],
-        mode="lines", line=dict(color="#a855f7", width=2, shape="spline"),
+        mode="lines+markers",
+        line=dict(color="#a855f7", width=2, shape="spline"),
+        marker=dict(color=marker_colors, size=3),
         fill="tozeroy", fillcolor="rgba(168,85,247,0.05)",
         name="Gas Level",
         hovertemplate="<b>%{x}</b><br>Gas: %{y} ADC<extra></extra>",
@@ -554,12 +560,12 @@ def create_sensor_heatmap(df):
     df_h["minute"] = df_h["timestamp"].dt.minute
     df_h["time_bin"] = df_h["timestamp"].dt.strftime("%H:%M")
 
-    # Create bins of readings
-    bins = df_h.groupby("time_bin").agg(
-        water_mean=("water_level_cm", "mean"),
-        gas_mean=("gas_level", "mean"),
-        anomaly_count=("is_anomaly", "sum") if "is_anomaly" in df_h.columns else ("water_level_cm", "count"),
-    ).tail(30)
+    # Create bins of readings (#7: removed unused anomaly_count agg)
+    agg_dict = {
+        "water_mean": ("water_level_cm", "mean"),
+        "gas_mean": ("gas_level", "mean"),
+    }
+    bins = df_h.groupby("time_bin").agg(**agg_dict).tail(30)
 
     fig = go.Figure(go.Heatmap(
         x=bins.index,
@@ -568,9 +574,9 @@ def create_sensor_heatmap(df):
         colorscale=[[0, "#0f172a"], [0.3, "#1e3a5f"], [0.6, "#3b82f6"], [0.8, "#f97316"], [1, "#ef4444"]],
         hovertemplate="Time: %{x}<br>%{y}: %{z:.1f}<extra></extra>",
     ))
-    fig.update_layout(**CHART_LAYOUT, height=200,
-                      title=dict(text="🗺️ Sensor Heatmap", font=dict(size=13, color="#e2e8f0")),
-                      yaxis=dict(gridcolor="rgba(51,65,85,0.2)", color="#64748b"))
+    layout = {**CHART_LAYOUT, "yaxis": dict(gridcolor="rgba(51,65,85,0.2)", color="#64748b")}
+    fig.update_layout(**layout, height=200,
+                      title=dict(text="🗺️ Sensor Heatmap", font=dict(size=13, color="#e2e8f0")))
     return fig
 
 
@@ -656,14 +662,14 @@ def render_sidebar():
 def main():
     data_mode, refresh_rate, max_points = render_sidebar()
 
-    # Load data
+    # Load data (#13: pass refresh_rate so cache TTL matches slider)
     if data_mode == "Live Data":
-        df = load_live_data()
+        df = load_live_data(ttl_seconds=refresh_rate)
         data_label = "LIVE"
     else:
         df = load_training_data()
         data_label = "HISTORICAL"
-    alerts_df = load_alerts()
+    alerts_df = load_alerts(ttl_seconds=refresh_rate)
 
     # Compute KPI values
     if not df.empty:
@@ -916,10 +922,14 @@ def main():
             status = "✅" if exists else "❌"
             st.markdown(f"{status} **{name}**: `{os.path.basename(path)}` ({size})")
 
-    # ─── Auto Refresh ────────────────────────────────────
+    # ─── Auto Refresh (#4: non-blocking refresh) ─────────
     if data_mode == "Live Data":
-        time.sleep(refresh_rate)
-        st.rerun()
+        import streamlit.components.v1 as components
+        # Use a short JS timer to trigger rerun without blocking the server thread
+        components.html(
+            f"<script>setTimeout(() => window.parent.postMessage({{type: 'streamlit:rerun'}}, '*'), {refresh_rate * 1000});</script>",
+            height=0,
+        )
 
 
 if __name__ == "__main__":

@@ -14,8 +14,7 @@ from datetime import datetime
 
 import serial
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config.settings import SERIAL_PORT, SERIAL_BAUD, SERIAL_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -88,9 +87,12 @@ class SerialReader:
                     self._error_count += 1
                     continue
 
-                # Add timestamp and push to queue
+                # Add timestamp and normalize fields
                 data["timestamp"] = datetime.now().isoformat()
                 data["water_level_cm"] = round(water, 2)
+                data.pop("water_level", None)  # Remove raw key to avoid duplicate
+                data.setdefault("is_anomaly", 0)
+                data.setdefault("anomaly_type", "NORMAL")
 
                 try:
                     self.data_queue.put_nowait(data)

@@ -7,13 +7,11 @@ Usage:
 """
 
 import os
-import sys
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 
-# Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config.settings import (
     SENSOR_DATA_CSV, DATA_DIR,
     WATER_LEVEL_NORMAL_LOW, WATER_LEVEL_NORMAL_HIGH,
@@ -109,6 +107,9 @@ def inject_anomalies(
             ramp_in = max(1, int(ramp * 0.3))
 
             for j in range(i, end):
+                if anomaly_count >= total_anomaly_target:
+                    break  # Guard against overshooting the target rate
+
                 progress = min(1.0, (j - i) / ramp_in)
 
                 # Blend from normal toward anomalous values

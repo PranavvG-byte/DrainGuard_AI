@@ -7,15 +7,12 @@ Usage:
     python backend/app.py --mode serial       # Run with ESP32 hardware
 """
 
-import os
-import sys
 import time
 import argparse
 import logging
 import threading
 from datetime import datetime
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.settings import LIVE_DATA_CSV, ALERT_LOG_CSV
 from backend.simulator import SensorSimulator
@@ -133,7 +130,6 @@ def main():
         daemon=True,
     )
     inference_thread.start()
-    logger.info("Inference loop started")
 
     # Main thread: status reporting
     try:

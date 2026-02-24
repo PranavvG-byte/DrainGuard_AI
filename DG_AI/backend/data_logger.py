@@ -10,8 +10,7 @@ import threading
 import logging
 from datetime import datetime
 
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config.settings import LIVE_DATA_CSV, ALERT_LOG_CSV, DATA_DIR
 
 logger = logging.getLogger(__name__)
@@ -57,6 +56,13 @@ class DataLogger:
                 self._row_count = sum(1 for _ in f) - 1  # Minus header
         except Exception:
             self._row_count = 0
+
+        # Count existing alerts (#10: persist alert count across restarts)
+        try:
+            with open(self.alert_csv, 'r') as f:
+                self._alert_count = max(0, sum(1 for _ in f) - 1)
+        except Exception:
+            self._alert_count = 0
 
     def log_reading(self, reading: dict):
         """Log a sensor reading to the live CSV."""
@@ -111,6 +117,7 @@ class DataLogger:
             logger.info(f"Rotated live data to {archive_path}")
         except OSError as e:
             logger.error(f"Rotation failed: {e}")
+            return  # Don't create fresh file if rename failed — prevents data loss
 
         # Create fresh file
         with open(self.live_csv, 'w', newline='') as f:

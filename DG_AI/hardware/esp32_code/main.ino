@@ -32,7 +32,7 @@ unsigned long bootTime = 0;
 
 // ─── Ultrasonic: Take N readings, return median ─────────────
 float readUltrasonicMedian(int samples) {
-  float readings[samples];
+  float readings[MEDIAN_SAMPLES];  // Fixed-size array avoids non-standard VLA
   
   for (int i = 0; i < samples; i++) {
     digitalWrite(TRIG_PIN, LOW);
